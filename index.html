@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Carteira</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0E12;
+    --card:#12171D;
+    --border:#212831;
+    --text:#E8ECEF;
+    --dim:#828C99;
+    --dimmer:#555F6B;
+    --green:#00E676;
+    --green-dim:#0B3B27;
+    --red:#FF4757;
+    --red-dim:#3B1219;
+    --amber:#F0B90B;
+    --amber-dim:#3B2E06;
+    --mono:'JetBrains Mono', monospace;
+    --display:'Space Grotesk', sans-serif;
+    --body:'Inter', sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0;
+    font-family:var(--body);
+    background:var(--bg);
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:40px;
+  }
+  .wrap{max-width:480px;margin:0 auto;padding:0 16px;}
+
+  header{
+    position:sticky;
+    top:0;
+    z-index:10;
+    background:rgba(10,14,18,0.92);
+    backdrop-filter:blur(10px);
+    padding:18px 16px 14px;
+    border-bottom:1px solid var(--border);
+  }
+  header .inner{max-width:480px;margin:0 auto;}
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--dim);
+    margin-bottom:6px;
+  }
+  .total-value{
+    font-family:var(--mono);
+    font-weight:700;
+    font-size:34px;
+    letter-spacing:-0.02em;
+    line-height:1.1;
+  }
+  .total-delta{
+    font-family:var(--mono);
+    font-size:13px;
+    margin-top:4px;
+    font-weight:600;
+  }
+  .delta.up{color:var(--green);}
+  .delta.down{color:var(--red);}
+  .delta.flat{color:var(--dimmer);}
+
+  main{padding-top:18px;}
+  section{margin-bottom:18px;}
+
+  .sec-head-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:3px;
+  }
+  .sec-title{
+    font-family:var(--display);
+    font-weight:600;
+    font-size:15px;
+    margin:0;
+  }
+  .sec-sub{
+    color:var(--dim);
+    font-size:12.5px;
+    margin:0 0 12px;
+    line-height:1.5;
+  }
+
+  .edit-toggle{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--dim);
+    font-family:var(--mono);
+    font-size:11.5px;
+    padding:6px 12px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .edit-toggle.active{
+    background:var(--green-dim);
+    border-color:var(--green);
+    color:var(--green);
+  }
+
+  .targets-warning{
+    font-family:var(--mono);
+    font-size:11px;
+    padding:8px 12px;
+    border-radius:8px;
+    background:var(--amber-dim);
+    color:var(--amber);
+    margin-bottom:10px;
+  }
+
+  /* Asset cards */
+  .asset-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:14px 16px;
+    margin-bottom:10px;
+  }
+  .asset-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+    gap:10px;
+  }
+  .asset-name-wrap{display:flex;align-items:center;gap:9px;min-width:0;}
+  .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .asset-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .asset-target{font-family:var(--mono);font-size:11px;color:var(--dimmer);white-space:nowrap;}
+
+  .asset-input-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .currency-prefix{
+    font-family:var(--mono);
+    color:var(--dim);
+    font-size:15px;
+  }
+  .asset-input-row input{
+    flex:1;
+    background:#0D1216;
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:11px 12px;
+    border-radius:9px;
+    font-family:var(--mono);
+    font-size:16px;
+    font-weight:600;
+    outline:none;
+    width:100%;
+    min-width:0;
+  }
+  .asset-input-row input:focus{border-color:var(--green);}
+
+  .bar-track{
+    position:relative;
+    height:7px;
+    background:#1A2028;
+    border-radius:4px;
+    margin-bottom:8px;
+  }
+  .bar-fill{height:100%;border-radius:4px;transition:width .3s ease;}
+  .bar-target-mark{
+    position:absolute;
+    top:-3px;
+    width:2px;
+    height:13px;
+    background:#4A5460;
+  }
+
+  .asset-foot{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-family:var(--mono);
+    font-size:11.5px;
+  }
+  .asset-pct{color:var(--dim);}
+  .status-pill{
+    font-family:var(--mono);
+    font-size:10px;
+    padding:3px 8px;
+    border-radius:6px;
+    font-weight:700;
+  }
+  .status-ok{background:#151B22;color:var(--dimmer);}
+  .status-buy{background:var(--green-dim);color:var(--green);}
+  .status-over{background:var(--red-dim);color:var(--red);}
+
+  /* Edit mode fields */
+  .asset-card.editing{border-color:#33404D;}
+  .edit-field-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .edit-field{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .edit-field.small{flex:0 0 84px;}
+  .edit-field label{
+    font-family:var(--mono);
+    font-size:10px;
+    color:var(--dimmer);
+    text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+  .edit-field input{
+    background:#0D1216;
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:9px 10px;
+    border-radius:8px;
+    font-family:var(--body);
+    font-size:13.5px;
+    outline:none;
+    width:100%;
+  }
+  .edit-field input:focus{border-color:var(--green);}
+  .edit-field.pct-field input{font-family:var(--mono);text-align:right;}
+  .remove-asset-btn{
+    background:transparent;
+    border:1px solid var(--red-dim);
+    color:var(--red);
+    font-family:var(--mono);
+    font-size:11px;
+    padding:8px 10px;
+    border-radius:8px;
+    cursor:pointer;
+    width:100%;
+  }
+
+  .add-asset-btn{
+    width:100%;
+    background:transparent;
+    border:1.5px dashed var(--border);
+    color:var(--dim);
+    font-family:var(--body);
+    font-weight:600;
+    font-size:13.5px;
+    padding:13px;
+    border-radius:14px;
+    cursor:pointer;
+  }
+  .add-asset-btn:active{transform:scale(.99);}
+
+  /* Save bar */
+  .save-bar{
+    position:sticky;
+    bottom:0;
+    background:linear-gradient(0deg, var(--bg) 60%, transparent);
+    padding:16px 0 6px;
+    margin-top:4px;
+  }
+  .btn-save{
+    width:100%;
+    background:var(--green);
+    color:#04140C;
+    border:none;
+    padding:15px;
+    border-radius:12px;
+    font-family:var(--body);
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+  }
+  .btn-save:active{transform:scale(.98);}
+  .save-hint{
+    text-align:center;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--dimmer);
+    margin-top:8px;
+  }
+
+  .donut-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:16px;
+  }
+  .donut-box{height:180px;}
+
+  .evo-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:16px;
+  }
+  .evo-chart-box{height:160px;}
+
+  details{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:14px 16px;
+  }
+  summary{
+    font-family:var(--display);
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    list-style:none;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  summary::-webkit-details-marker{display:none;}
+  summary .chevron{
+    font-family:var(--mono);
+    color:var(--dim);
+    transition:transform .2s;
+  }
+  details[open] summary .chevron{transform:rotate(180deg);}
+  .week-list{margin-top:12px;}
+  .week-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:9px 0;
+    border-bottom:1px solid var(--border);
+    font-size:12.5px;
+  }
+  .week-row:last-child{border-bottom:none;}
+  .week-row .wk{font-family:var(--mono);color:var(--dim);width:26px;}
+  .week-row .wdesc{flex:1;color:var(--text);}
+  .aporte-edit{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px solid var(--border);
+  }
+  .aporte-edit label{font-size:11.5px;color:var(--dim);}
+  .aporte-edit input{
+    width:90px;
+    background:#0D1216;
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:7px 9px;
+    border-radius:7px;
+    font-family:var(--mono);
+    font-size:13px;
+  }
+
+  footer{
+    text-align:center;
+    color:var(--dimmer);
+    font-family:var(--mono);
+    font-size:10.5px;
+    margin-top:24px;
+    padding:0 16px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <div class="eyebrow">Patrimônio total</div>
+    <div class="total-value" id="totalValue">R$ 0,00</div>
+    <div class="total-delta delta flat" id="totalDelta">sem histórico ainda</div>
+  </div>
+</header>
+
+<div class="wrap">
+<main>
+
+  <section>
+    <div class="sec-head-row">
+      <p class="sec-title">Seus ativos</p>
+      <button class="edit-toggle" id="editToggle">Editar</button>
+    </div>
+    <p class="sec-sub">Atualize o valor total que você tem em cada ativo hoje. O rebalanceamento é calculado na hora.</p>
+    <div id="targetsWarning"></div>
+    <div id="assetList"></div>
+    <button class="add-asset-btn" id="addAssetBtn" style="display:none;">+ Adicionar ativo</button>
+  </section>
+
+  <section>
+    <div class="donut-card">
+      <p class="sec-title" style="margin-bottom:10px;">Alocação atual</p>
+      <div class="donut-box"><canvas id="donutChart"></canvas></div>
+    </div>
+  </section>
+
+  <div class="save-bar">
+    <button class="btn-save" id="saveBtn">Salvar atualização</button>
+    <div class="save-hint">registra um ponto na evolução de hoje</div>
+  </div>
+
+  <section>
+    <div class="evo-card">
+      <p class="sec-title" style="margin-bottom:2px;">Evolução</p>
+      <p class="sec-sub">Gerada automaticamente a cada vez que você salva.</p>
+      <div class="evo-chart-box"><canvas id="evoChart"></canvas></div>
+    </div>
+  </section>
+
+  <section>
+    <details>
+      <summary>Guia de aportes semanais <span class="chevron">▾</span></summary>
+      <div class="week-list" id="weekList"></div>
+      <div class="aporte-edit">
+        <label for="aporteSemanal">Aporte semanal (R$)</label>
+        <input type="number" id="aporteSemanal" value="500" min="0" step="10">
+      </div>
+    </details>
+  </section>
+
+  <footer>dados salvos apenas neste navegador</footer>
+</main>
+</div>
+
+<script>
+/* ---------------- Config padrão (usado só na primeira visita) ---------------- */
+const DEFAULT_ASSETS = [
+  { key:'VT',     name:'VT · Base Global',  target:0.50, color:'#4C8DFF' },
+  { key:'ETFBR',  name:'ETF Ações BR',      target:0.125,color:'#00E676' },
+  { key:'FII',    name:'FIIs',              target:0.125,color:'#F0B90B' },
+  { key:'QQQ',    name:'QQQ · Tecnologia',  target:0.10, color:'#9B7BFF' },
+  { key:'IPCA',   name:'Tesouro IPCA',      target:0.10, color:'#FF9F43' },
+  { key:'Cripto', name:'Cripto & Ouro',     target:0.05, color:'#FF4757' },
+];
+const COLOR_PALETTE = ['#4C8DFF','#00E676','#F0B90B','#9B7BFF','#FF9F43','#FF4757','#38D9C9','#E85D9E','#7CB342','#B0BEC5'];
+
+const WEEK_PLAN = [
+  { week:1, parts:[{key:'VT',frac:1.0}] },
+  { week:2, parts:[{key:'VT',frac:1.0}] },
+  { week:3, parts:[{key:'QQQ',frac:0.4},{label:'Ouro',frac:0.4},{key:'Cripto',frac:0.2,label:'Bitcoin'}] },
+  { week:4, parts:[{key:'FII',frac:0.5},{key:'ETFBR',frac:0.5}] },
+];
+
+const fmtBRL = (n) => (isFinite(n)?n:0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+const fmtPct = (n) => (n*100).toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1}) + '%';
+const todayISO = () => new Date().toISOString().slice(0,10);
+
+const assetList = document.getElementById('assetList');
+let donutChart = null, evoChart = null;
+let editMode = false;
+
+/* ---------------- Load state ---------------- */
+let ASSETS = JSON.parse(localStorage.getItem('carteira_ativos_v1') || 'null') || DEFAULT_ASSETS.map(a => ({...a}));
+let assetValues = JSON.parse(localStorage.getItem('carteira_valores_v3') || '{}');
+ASSETS.forEach(a => { if(assetValues[a.key] == null) assetValues[a.key] = 0; });
+
+let snapshots = JSON.parse(localStorage.getItem('carteira_snapshots_v1') || '[]');
+
+function saveAssetsConfig(){
+  localStorage.setItem('carteira_ativos_v1', JSON.stringify(ASSETS));
+}
+function saveAssetValues(){
+  localStorage.setItem('carteira_valores_v3', JSON.stringify(assetValues));
+}
+
+function nextColor(){
+  const used = ASSETS.map(a=>a.color);
+  return COLOR_PALETTE.find(c => !used.includes(c)) || '#8892A0';
+}
+
+/* ---------------- Render asset cards ---------------- */
+function renderAssets(){
+  const total = ASSETS.reduce((s,a) => s + (parseFloat(assetValues[a.key]) || 0), 0);
+  const targetSum = ASSETS.reduce((s,a) => s + (parseFloat(a.target)||0), 0);
+
+  const warnBox = document.getElementById('targetsWarning');
+  if(editMode && Math.abs(targetSum - 1) > 0.005){
+    warnBox.innerHTML = `<div class="targets-warning">Suas metas somam ${fmtPct(targetSum)} — ajuste para fechar em 100%.</div>`;
+  } else {
+    warnBox.innerHTML = '';
+  }
+
+  assetList.innerHTML = ASSETS.map(a => {
+    const val = parseFloat(assetValues[a.key]) || 0;
+    const current = total > 0 ? val/total : 0;
+    const diff = current - a.target;
+    let status='ok', label='Em dia', suggestion=0;
+    if(total > 0 && diff < -0.01){
+      status='buy'; label='Aportar aqui';
+      suggestion = (total * a.target) - val;
+    } else if(total > 0 && diff > 0.05){
+      status='over'; label='Acima da meta';
+    }
+
+    if(editMode){
+      return `
+        <div class="asset-card editing" data-key="${a.key}">
+          <div class="edit-field-row">
+            <div class="edit-field">
+              <label>Nome do ativo</label>
+              <input type="text" value="${a.name}" class="edit-name-input" data-key="${a.key}">
+            </div>
+            <div class="edit-field pct-field small">
+              <label>Meta %</label>
+              <input type="number" min="0" max="100" step="0.5" value="${(a.target*100).toFixed(1)}" class="edit-target-input" data-key="${a.key}">
+            </div>
+          </div>
+          <button class="remove-asset-btn" data-key="${a.key}">Remover ativo</button>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="asset-card">
+        <div class="asset-top">
+          <div class="asset-name-wrap">
+            <span class="dot" style="background:${a.color}"></span>
+            <span class="asset-name">${a.name}</span>
+          </div>
+          <span class="asset-target">meta ${fmtPct(a.target)}</span>
+        </div>
+        <div class="asset-input-row">
+          <span class="currency-prefix">R$</span>
+          <input type="number" inputmode="decimal" min="0" step="0.01"
+                 value="${val || ''}" placeholder="0"
+                 data-key="${a.key}" class="asset-value-input">
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${Math.min(current*100,100)}%; background:${a.color}"></div>
+          <div class="bar-target-mark" style="left:${Math.min(a.target*100,100)}%"></div>
+        </div>
+        <div class="asset-foot">
+          <span class="asset-pct">${fmtPct(current)} da carteira</span>
+          <span class="status-pill status-${status}">${label}${suggestion>0 ? ' · '+fmtBRL(suggestion) : ''}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if(editMode){
+    document.querySelectorAll('.edit-name-input').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        const a = ASSETS.find(x=>x.key===e.target.dataset.key);
+        if(a){ a.name = e.target.value; saveAssetsConfig(); renderDonut(total); }
+      });
+    });
+    document.querySelectorAll('.edit-target-input').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        const a = ASSETS.find(x=>x.key===e.target.dataset.key);
+        if(a){
+          a.target = Math.max(0, Math.min(100, parseFloat(e.target.value)||0)) / 100;
+          saveAssetsConfig();
+          renderAssets();
+        }
+      });
+    });
+    document.querySelectorAll('.remove-asset-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const key = e.target.dataset.key;
+        const a = ASSETS.find(x=>x.key===key);
+        if(!confirm(`Remover "${a ? a.name : key}"? O valor atual dele deixará de contar no patrimônio.`)) return;
+        ASSETS = ASSETS.filter(x => x.key !== key);
+        delete assetValues[key];
+        saveAssetsConfig();
+        saveAssetValues();
+        renderAssets();
+      });
+    });
+  } else {
+    document.querySelectorAll('.asset-value-input').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        assetValues[e.target.dataset.key] = parseFloat(e.target.value) || 0;
+        saveAssetValues();
+        renderAssets();
+      });
+    });
+  }
+
+  renderDonut(total);
+  updateHeader(total);
+}
+
+function renderDonut(total){
+  const ctx = document.getElementById('donutChart');
+  if(donutChart) donutChart.destroy();
+  if(total <= 0){
+    ctx.getContext('2d').clearRect(0,0,ctx.width,ctx.height);
+    return;
+  }
+  donutChart = new Chart(ctx, {
+    type:'doughnut',
+    data:{
+      labels: ASSETS.map(a=>a.name),
+      datasets:[{
+        data: ASSETS.map(a => parseFloat(assetValues[a.key])||0),
+        backgroundColor: ASSETS.map(a=>a.color),
+        borderColor:'#12171D',
+        borderWidth:2,
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      cutout:'66%',
+      plugins:{ legend:{ display:true, position:'bottom', labels:{ color:'#828C99', font:{size:9,family:'Inter'}, boxWidth:8, padding:8 } } }
+    }
+  });
+}
+
+/* ---------------- Header ---------------- */
+function updateHeader(total){
+  document.getElementById('totalValue').textContent = fmtBRL(total);
+  const deltaEl = document.getElementById('totalDelta');
+  if(snapshots.length > 0){
+    const last = snapshots[snapshots.length-1].total;
+    const diff = total - last;
+    if(Math.abs(diff) < 0.005){
+      deltaEl.className = 'total-delta delta flat';
+      deltaEl.textContent = 'sem alteração desde o último salvo';
+    } else {
+      const pct = last !== 0 ? (diff/last)*100 : 0;
+      deltaEl.className = 'total-delta delta ' + (diff>0 ? 'up':'down');
+      const sign = diff>0 ? '+' : '';
+      deltaEl.textContent = `${sign}${fmtBRL(diff)} (${sign}${pct.toFixed(1)}%) desde o último salvo`;
+    }
+  } else {
+    deltaEl.className = 'total-delta delta flat';
+    deltaEl.textContent = 'sem histórico ainda — clique em salvar';
+  }
+}
+
+/* ---------------- Evolução ---------------- */
+function renderEvo(){
+  const box = document.getElementById('evoChart');
+  if(snapshots.length === 0){
+    if(evoChart) evoChart.destroy();
+    box.getContext('2d').clearRect(0,0,box.width,box.height);
+    return;
+  }
+  const labels = snapshots.map(s => {
+    const d = new Date(s.date+'T00:00:00');
+    return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'short'}).replace('.','');
+  });
+  const values = snapshots.map(s => s.total);
+
+  if(evoChart) evoChart.destroy();
+  evoChart = new Chart(box, {
+    type:'line',
+    data:{ labels, datasets:[{
+      data: values,
+      borderColor:'#00E676',
+      backgroundColor:'rgba(0,230,118,0.08)',
+      borderWidth:2,
+      pointRadius:3,
+      pointBackgroundColor:'#00E676',
+      tension:0.3,
+      fill:true,
+    }]},
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ ticks:{color:'#828C99', font:{family:'JetBrains Mono', size:9}}, grid:{display:false} },
+        y:{ ticks:{color:'#828C99', font:{family:'JetBrains Mono', size:9}, callback:(v)=>fmtBRL(v)}, grid:{color:'#1A2028'} }
+      }
+    }
+  });
+}
+
+/* ---------------- Salvar snapshot ---------------- */
+document.getElementById('saveBtn').addEventListener('click', () => {
+  const total = ASSETS.reduce((s,a) => s + (parseFloat(assetValues[a.key]) || 0), 0);
+  const today = todayISO();
+  const idx = snapshots.findIndex(s => s.date === today);
+  const entry = { date: today, total, breakdown: {...assetValues} };
+  if(idx >= 0) snapshots[idx] = entry; else snapshots.push(entry);
+  snapshots.sort((a,b) => a.date.localeCompare(b.date));
+  localStorage.setItem('carteira_snapshots_v1', JSON.stringify(snapshots));
+
+  renderEvo();
+  updateHeader(total);
+
+  const btn = document.getElementById('saveBtn');
+  const original = btn.textContent;
+  btn.textContent = 'Salvo ✓';
+  setTimeout(() => btn.textContent = original, 1200);
+});
+
+/* ---------------- Editar ativos ---------------- */
+const editToggle = document.getElementById('editToggle');
+const addAssetBtn = document.getElementById('addAssetBtn');
+
+editToggle.addEventListener('click', () => {
+  editMode = !editMode;
+  editToggle.textContent = editMode ? 'Concluir' : 'Editar';
+  editToggle.classList.toggle('active', editMode);
+  addAssetBtn.style.display = editMode ? 'block' : 'none';
+  renderAssets();
+});
+
+addAssetBtn.addEventListener('click', () => {
+  const key = 'ativo_' + Date.now();
+  ASSETS.push({ key, name:'Novo ativo', target:0, color: nextColor() });
+  assetValues[key] = 0;
+  saveAssetsConfig();
+  saveAssetValues();
+  renderAssets();
+});
+
+/* ---------------- Guia semanal ---------------- */
+const weekList = document.getElementById('weekList');
+const aporteInput = document.getElementById('aporteSemanal');
+aporteInput.value = localStorage.getItem('carteira_aporte_semanal') || '500';
+
+function renderWeekGuide(){
+  const total = parseFloat(aporteInput.value) || 0;
+  weekList.innerHTML = WEEK_PLAN.map(w => {
+    const desc = w.parts.map(p => {
+      const asset = ASSETS.find(a=>a.key===p.key);
+      const name = p.label || (asset ? asset.name : p.key);
+      return `${name} ${fmtBRL(total*p.frac)}`;
+    }).join(' + ');
+    return `<div class="week-row"><span class="wk">S${w.week}</span><span class="wdesc">${desc}</span></div>`;
+  }).join('');
+}
+aporteInput.addEventListener('input', () => {
+  localStorage.setItem('carteira_aporte_semanal', aporteInput.value);
+  renderWeekGuide();
+});
+
+/* ---------------- Init ---------------- */
+renderAssets();
+renderEvo();
+renderWeekGuide();
+</script>
+</body>
+</html>
