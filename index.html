@@ -102,6 +102,7 @@
     padding:6px 12px;
     border-radius:8px;
     cursor:pointer;
+    flex-shrink:0;
   }
   .edit-toggle.active{
     background:var(--green-dim);
@@ -201,7 +202,7 @@
   .status-buy{background:var(--green-dim);color:var(--green);}
   .status-over{background:var(--red-dim);color:var(--red);}
 
-  /* Edit mode fields */
+  /* Edit mode fields (assets) */
   .asset-card.editing{border-color:#33404D;}
   .edit-field-row{
     display:flex;
@@ -217,7 +218,7 @@
     text-transform:uppercase;
     letter-spacing:.05em;
   }
-  .edit-field input{
+  .edit-field input, .edit-field select{
     background:#0D1216;
     border:1px solid var(--border);
     color:var(--text);
@@ -228,7 +229,7 @@
     outline:none;
     width:100%;
   }
-  .edit-field input:focus{border-color:var(--green);}
+  .edit-field input:focus, .edit-field select:focus{border-color:var(--green);}
   .edit-field.pct-field input{font-family:var(--mono);text-align:right;}
   .remove-asset-btn{
     background:transparent;
@@ -324,7 +325,14 @@
     transition:transform .2s;
   }
   details[open] summary .chevron{transform:rotate(180deg);}
-  .week-list{margin-top:12px;}
+
+  .week-panel-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:12px;
+  }
+  .week-list{margin-top:8px;}
   .week-row{
     display:flex;
     justify-content:space-between;
@@ -334,8 +342,78 @@
     font-size:12.5px;
   }
   .week-row:last-child{border-bottom:none;}
-  .week-row .wk{font-family:var(--mono);color:var(--dim);width:26px;}
+  .week-row .wk{font-family:var(--mono);color:var(--dim);width:26px;flex-shrink:0;}
   .week-row .wdesc{flex:1;color:var(--text);}
+
+  .week-edit-block{
+    border-bottom:1px solid var(--border);
+    padding:12px 0;
+  }
+  .week-edit-block:last-child{border-bottom:none;}
+  .week-edit-title{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--dim);
+    margin-bottom:8px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .week-part-row{
+    display:flex;
+    gap:6px;
+    margin-bottom:6px;
+    align-items:center;
+  }
+  .week-part-row select{
+    flex:1.4;
+    background:#0D1216;
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:8px 8px;
+    border-radius:7px;
+    font-size:12.5px;
+    min-width:0;
+  }
+  .week-part-row input{
+    flex:0 0 62px;
+    background:#0D1216;
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:8px 6px;
+    border-radius:7px;
+    font-family:var(--mono);
+    font-size:12.5px;
+    text-align:right;
+  }
+  .week-part-remove{
+    flex:0 0 auto;
+    background:transparent;
+    border:none;
+    color:var(--red);
+    font-size:16px;
+    cursor:pointer;
+    padding:4px 6px;
+  }
+  .week-add-part{
+    background:transparent;
+    border:1px dashed var(--border);
+    color:var(--dim);
+    font-family:var(--mono);
+    font-size:11px;
+    padding:6px 10px;
+    border-radius:7px;
+    cursor:pointer;
+    margin-top:2px;
+  }
+  .week-sum-note{
+    font-family:var(--mono);
+    font-size:10.5px;
+    margin-top:4px;
+  }
+  .week-sum-note.ok{color:var(--dimmer);}
+  .week-sum-note.bad{color:var(--amber);}
+
   .aporte-edit{
     display:flex;
     align-items:center;
@@ -413,7 +491,15 @@
   <section>
     <details>
       <summary>Guia de aportes semanais <span class="chevron">▾</span></summary>
+
+      <div class="week-panel-head">
+        <span class="sec-sub" style="margin:0;">Roteiro de 4 semanas</span>
+        <button class="edit-toggle" id="weekEditToggle">Editar</button>
+      </div>
+
       <div class="week-list" id="weekList"></div>
+      <div id="weekEditList" style="display:none;"></div>
+
       <div class="aporte-edit">
         <label for="aporteSemanal">Aporte semanal (R$)</label>
         <input type="number" id="aporteSemanal" value="500" min="0" step="10">
@@ -437,11 +523,11 @@ const DEFAULT_ASSETS = [
 ];
 const COLOR_PALETTE = ['#4C8DFF','#00E676','#F0B90B','#9B7BFF','#FF9F43','#FF4757','#38D9C9','#E85D9E','#7CB342','#B0BEC5'];
 
-const WEEK_PLAN = [
-  { week:1, parts:[{key:'VT',frac:1.0}] },
-  { week:2, parts:[{key:'VT',frac:1.0}] },
-  { week:3, parts:[{key:'QQQ',frac:0.4},{label:'Ouro',frac:0.4},{key:'Cripto',frac:0.2,label:'Bitcoin'}] },
-  { week:4, parts:[{key:'FII',frac:0.5},{key:'ETFBR',frac:0.5}] },
+const DEFAULT_WEEK_PLAN = [
+  { week:1, parts:[{ assetKey:'VT', frac:1.0 }] },
+  { week:2, parts:[{ assetKey:'VT', frac:1.0 }] },
+  { week:3, parts:[{ assetKey:'QQQ', frac:0.4 }, { assetKey:'Cripto', frac:0.6 }] },
+  { week:4, parts:[{ assetKey:'FII', frac:0.5 }, { assetKey:'ETFBR', frac:0.5 }] },
 ];
 
 const fmtBRL = (n) => (isFinite(n)?n:0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
@@ -451,24 +537,28 @@ const todayISO = () => new Date().toISOString().slice(0,10);
 const assetList = document.getElementById('assetList');
 let donutChart = null, evoChart = null;
 let editMode = false;
+let weekEditMode = false;
 
 /* ---------------- Load state ---------------- */
 let ASSETS = JSON.parse(localStorage.getItem('carteira_ativos_v1') || 'null') || DEFAULT_ASSETS.map(a => ({...a}));
 let assetValues = JSON.parse(localStorage.getItem('carteira_valores_v3') || '{}');
 ASSETS.forEach(a => { if(assetValues[a.key] == null) assetValues[a.key] = 0; });
 
+let WEEK_PLAN = JSON.parse(localStorage.getItem('carteira_semanal_v1') || 'null') || DEFAULT_WEEK_PLAN.map(w => ({week:w.week, parts:w.parts.map(p=>({...p}))}));
+
 let snapshots = JSON.parse(localStorage.getItem('carteira_snapshots_v1') || '[]');
 
-function saveAssetsConfig(){
-  localStorage.setItem('carteira_ativos_v1', JSON.stringify(ASSETS));
-}
-function saveAssetValues(){
-  localStorage.setItem('carteira_valores_v3', JSON.stringify(assetValues));
-}
+function saveAssetsConfig(){ localStorage.setItem('carteira_ativos_v1', JSON.stringify(ASSETS)); }
+function saveAssetValues(){ localStorage.setItem('carteira_valores_v3', JSON.stringify(assetValues)); }
+function saveWeekPlan(){ localStorage.setItem('carteira_semanal_v1', JSON.stringify(WEEK_PLAN)); }
 
 function nextColor(){
   const used = ASSETS.map(a=>a.color);
   return COLOR_PALETTE.find(c => !used.includes(c)) || '#8892A0';
+}
+function assetName(key){
+  const a = ASSETS.find(x=>x.key===key);
+  return a ? a.name : '(ativo removido)';
 }
 
 /* ---------------- Render asset cards ---------------- */
@@ -542,13 +632,14 @@ function renderAssets(){
 
   if(editMode){
     document.querySelectorAll('.edit-name-input').forEach(inp => {
-      inp.addEventListener('input', (e) => {
+      // texto: também espera sair do campo, evita perder o foco a cada letra
+      inp.addEventListener('change', (e) => {
         const a = ASSETS.find(x=>x.key===e.target.dataset.key);
-        if(a){ a.name = e.target.value; saveAssetsConfig(); renderDonut(total); }
+        if(a){ a.name = e.target.value; saveAssetsConfig(); renderAssets(); renderWeekGuide(); }
       });
     });
     document.querySelectorAll('.edit-target-input').forEach(inp => {
-      inp.addEventListener('input', (e) => {
+      inp.addEventListener('change', (e) => {
         const a = ASSETS.find(x=>x.key===e.target.dataset.key);
         if(a){
           a.target = Math.max(0, Math.min(100, parseFloat(e.target.value)||0)) / 100;
@@ -564,17 +655,24 @@ function renderAssets(){
         if(!confirm(`Remover "${a ? a.name : key}"? O valor atual dele deixará de contar no patrimônio.`)) return;
         ASSETS = ASSETS.filter(x => x.key !== key);
         delete assetValues[key];
+        WEEK_PLAN.forEach(w => { w.parts = w.parts.filter(p => p.assetKey !== key); });
         saveAssetsConfig();
         saveAssetValues();
+        saveWeekPlan();
         renderAssets();
+        renderWeekGuide();
       });
     });
   } else {
     document.querySelectorAll('.asset-value-input').forEach(inp => {
-      inp.addEventListener('input', (e) => {
+      // só atualiza quando o campo perde o foco (ou Enter), não a cada tecla digitada
+      inp.addEventListener('change', (e) => {
         assetValues[e.target.dataset.key] = parseFloat(e.target.value) || 0;
         saveAssetValues();
         renderAssets();
+      });
+      inp.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter') e.target.blur();
       });
     });
   }
@@ -711,23 +809,97 @@ addAssetBtn.addEventListener('click', () => {
   renderAssets();
 });
 
-/* ---------------- Guia semanal ---------------- */
+/* ---------------- Guia semanal (visualização + edição) ---------------- */
 const weekList = document.getElementById('weekList');
+const weekEditList = document.getElementById('weekEditList');
+const weekEditToggle = document.getElementById('weekEditToggle');
 const aporteInput = document.getElementById('aporteSemanal');
 aporteInput.value = localStorage.getItem('carteira_aporte_semanal') || '500';
 
 function renderWeekGuide(){
   const total = parseFloat(aporteInput.value) || 0;
+
+  // modo visualização
   weekList.innerHTML = WEEK_PLAN.map(w => {
-    const desc = w.parts.map(p => {
-      const asset = ASSETS.find(a=>a.key===p.key);
-      const name = p.label || (asset ? asset.name : p.key);
-      return `${name} ${fmtBRL(total*p.frac)}`;
-    }).join(' + ');
-    return `<div class="week-row"><span class="wk">S${w.week}</span><span class="wdesc">${desc}</span></div>`;
+    const desc = w.parts.map(p => `${assetName(p.assetKey)} ${fmtBRL(total*p.frac)}`).join(' + ');
+    return `<div class="week-row"><span class="wk">S${w.week}</span><span class="wdesc">${desc || '—'}</span></div>`;
   }).join('');
+
+  // modo edição
+  weekEditList.innerHTML = WEEK_PLAN.map((w, wi) => {
+    const sum = w.parts.reduce((s,p) => s + (parseFloat(p.frac)||0), 0);
+    const sumClass = Math.abs(sum-1) > 0.01 ? 'bad' : 'ok';
+    const sumText = Math.abs(sum-1) > 0.01
+      ? `soma ${fmtPct(sum)} — ajuste para fechar 100%`
+      : `soma ${fmtPct(sum)}`;
+
+    const rows = w.parts.map((p, pi) => `
+      <div class="week-part-row">
+        <select class="week-asset-select" data-week="${wi}" data-part="${pi}">
+          ${ASSETS.map(a => `<option value="${a.key}" ${a.key===p.assetKey?'selected':''}>${a.name}</option>`).join('')}
+        </select>
+        <input type="number" min="0" max="100" step="1" value="${(p.frac*100).toFixed(0)}"
+               class="week-frac-input" data-week="${wi}" data-part="${pi}">
+        <button class="week-part-remove" data-week="${wi}" data-part="${pi}">×</button>
+      </div>
+    `).join('');
+
+    return `
+      <div class="week-edit-block">
+        <div class="week-edit-title">Semana ${w.week}</div>
+        ${rows}
+        <button class="week-add-part" data-week="${wi}">+ adicionar ativo nesta semana</button>
+        <div class="week-sum-note ${sumClass}">${sumText}</div>
+      </div>
+    `;
+  }).join('');
+
+  if(weekEditMode){
+    document.querySelectorAll('.week-asset-select').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        WEEK_PLAN[+e.target.dataset.week].parts[+e.target.dataset.part].assetKey = e.target.value;
+        saveWeekPlan();
+        renderWeekGuide();
+      });
+    });
+    document.querySelectorAll('.week-frac-input').forEach(inp => {
+      // também só atualiza ao sair do campo
+      inp.addEventListener('change', (e) => {
+        WEEK_PLAN[+e.target.dataset.week].parts[+e.target.dataset.part].frac = Math.max(0, Math.min(100, parseFloat(e.target.value)||0)) / 100;
+        saveWeekPlan();
+        renderWeekGuide();
+      });
+    });
+    document.querySelectorAll('.week-part-remove').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const wi = +e.target.dataset.week, pi = +e.target.dataset.part;
+        WEEK_PLAN[wi].parts.splice(pi, 1);
+        saveWeekPlan();
+        renderWeekGuide();
+      });
+    });
+    document.querySelectorAll('.week-add-part').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const wi = +e.target.dataset.week;
+        const fallbackKey = ASSETS[0] ? ASSETS[0].key : '';
+        WEEK_PLAN[wi].parts.push({ assetKey: fallbackKey, frac: 0 });
+        saveWeekPlan();
+        renderWeekGuide();
+      });
+    });
+  }
 }
-aporteInput.addEventListener('input', () => {
+
+weekEditToggle.addEventListener('click', () => {
+  weekEditMode = !weekEditMode;
+  weekEditToggle.textContent = weekEditMode ? 'Concluir' : 'Editar';
+  weekEditToggle.classList.toggle('active', weekEditMode);
+  weekList.style.display = weekEditMode ? 'none' : 'block';
+  weekEditList.style.display = weekEditMode ? 'block' : 'none';
+  renderWeekGuide();
+});
+
+aporteInput.addEventListener('change', () => {
   localStorage.setItem('carteira_aporte_semanal', aporteInput.value);
   renderWeekGuide();
 });
