@@ -300,6 +300,12 @@ section{margin-bottom:18px;}
 }
 .edit-field input:focus, .edit-field select:focus{border-color:var(--gold);}
 .edit-field.pct-field input{font-family:var(--mono);text-align:right;}
+.color-swatch-row{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:10px;}
+.swatch-btn{
+  width:30px;height:30px;border-radius:50%;border:2px solid transparent;
+  cursor:pointer;padding:0;flex-shrink:0;
+}
+.swatch-btn.selected{border-color:#fff;box-shadow:0 0 0 2px #000, 0 0 0 3px var(--gold);}
 .remove-asset-btn{
   background:transparent;
   border:1px solid var(--red-dim);
@@ -783,14 +789,14 @@ footer{
 <script>
 /* ---------------- Config padrão (usado só na primeira visita) ---------------- */
 const DEFAULT_ASSETS = [
-  { key:'VT',     name:'VT · Base Global',   target:0.50,  color:'#3B82F6', origin:'internacional' },
-  { key:'ETFBR',  name:'ETF Ações BR',       target:0.125, color:'#F59E0B', origin:'nacional' },
-  { key:'FII',    name:'FIIs',               target:0.125, color:'#10B981', origin:'nacional' },
-  { key:'QQQ',    name:'QQQ · Tecnologia',   target:0.10,  color:'#8B5CF6', origin:'internacional' },
-  { key:'IPCA',   name:'Tesouro IPCA',       target:0.10,  color:'#06B6D4', origin:'nacional' },
-  { key:'Cripto', name:'Cripto & Ouro',      target:0.05,  color:'#EAB308', origin:'internacional' },
+  { key:'VT',     name:'VT · Base Global',   target:0.50,  color:'#4F8EF7', origin:'internacional' },
+  { key:'ETFBR',  name:'ETF Ações BR',       target:0.125, color:'#FFB020', origin:'nacional' },
+  { key:'FII',    name:'FIIs',               target:0.125, color:'#2FD180', origin:'nacional' },
+  { key:'QQQ',    name:'QQQ · Tecnologia',   target:0.10,  color:'#A66BFF', origin:'internacional' },
+  { key:'IPCA',   name:'Tesouro IPCA',       target:0.10,  color:'#38D9C9', origin:'nacional' },
+  { key:'Cripto', name:'Cripto & Ouro',      target:0.05,  color:'#FFD34D', origin:'internacional' },
 ];
-const COLOR_PALETTE = ['#3B82F6','#10B981','#8B5CF6','#F59E0B','#EC4899','#84CC16','#06B6D4','#EAB308','#EF4444','#A855F7'];
+const COLOR_PALETTE = ['#4F8EF7','#2FD180','#A66BFF','#FFB020','#FF5A8A','#38D9C9','#FFD34D','#FF6B5B','#7C9CFF','#C7F464'];
 
 const DEFAULT_WEEK_PLAN = [
   { week:1, parts:[{ assetKey:'VT', frac:1.0 }] },
@@ -883,6 +889,12 @@ function renderAssets(){
               </select>
             </div>
           </div>
+          <div class="edit-field">
+            <label>Cor</label>
+            <div class="color-swatch-row" data-key="${a.key}">
+              ${COLOR_PALETTE.map(c => `<button type="button" class="swatch-btn${c.toLowerCase()===a.color.toLowerCase()?' selected':''}" data-key="${a.key}" data-color="${c}" style="background:${c}"></button>`).join('')}
+            </div>
+          </div>
           <button class="remove-asset-btn" data-key="${a.key}">Remover ativo</button>
         </div>
       `;
@@ -936,6 +948,12 @@ function renderAssets(){
       sel.addEventListener('change', (e) => {
         const a = ASSETS.find(x=>x.key===e.target.dataset.key);
         if(a){ a.origin = e.target.value; saveAssetsConfig(); renderAssets(); }
+      });
+    });
+    document.querySelectorAll('.swatch-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const a = ASSETS.find(x=>x.key===e.target.dataset.key);
+        if(a){ a.color = e.target.dataset.color; saveAssetsConfig(); renderAssets(); }
       });
     });
     document.querySelectorAll('.remove-asset-btn').forEach(btn => {
@@ -1469,12 +1487,15 @@ function drawTribar(ctx, cx, y, lineLen){
 }
 
 /* ---------------- Template "Dados completos" ---------------- */
-function renderDadosCanvas(dataOrdenada, total){
+function renderDadosCanvas(dataOrdenadaIn, total){
+  const sorted = [...dataOrdenadaIn].sort((a,b) => b.val - a.val);
+
   const W = 1080;
-  const headerH = 300, chartD = 480, chartTop = headerH, legendRowH = 56;
-  const legendTop = chartTop + chartD + 50;
-  const legendH = dataOrdenada.length * legendRowH + 30;
-  const boxesTop = legendTop + legendH + 20;
+  const headerH = 300, chartD = 480, chartTop = headerH, legendRowH = 64;
+  const legendPad = 26;
+  const legendTop = chartTop + chartD + 56;
+  const legendCardH = sorted.length * legendRowH + legendPad*2;
+  const boxesTop = legendTop + legendCardH + 34;
   const boxesH = 190;
   const footerH = 130;
   const H = boxesTop + boxesH + footerH;
@@ -1502,24 +1523,58 @@ function renderDadosCanvas(dataOrdenada, total){
 
   drawTribar(ctx, W/2, titleY + 66, 90);
 
-  // donut
+  // donut com espaçamento entre as fatias + brilho suave
   const cx = W/2, cy = chartTop + chartD/2, rOuter = chartD/2 - 8, rInner = rOuter*0.6;
+  const totalFrac = sorted.reduce((s,a) => s + a.val/total, 0);
+  const padAngle = 0.028;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(212,175,55,0.35)';
+  ctx.shadowBlur = 40;
+  ctx.beginPath();
+  ctx.arc(cx, cy, rOuter, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(212,175,55,0.15)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+
   let startAngle = -Math.PI/2;
-  dataOrdenada.forEach(a => {
-    const slice = (a.val/total) * Math.PI*2;
+  sorted.forEach(a => {
+    const sliceAngle = (a.val/total) * Math.PI*2;
+    const pad = sliceAngle > padAngle*3 ? padAngle : 0;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, rOuter, startAngle, startAngle + slice);
+    ctx.arc(cx, cy, rOuter, startAngle+pad/2, startAngle+sliceAngle-pad/2);
     ctx.closePath();
     ctx.fillStyle = a.color;
     ctx.fill();
-    startAngle += slice;
+    startAngle += sliceAngle;
   });
-  // buraco central + borda leve entre fatias
+  // buraco central
   ctx.beginPath();
   ctx.arc(cx, cy, rInner, 0, Math.PI*2);
   ctx.fillStyle = '#000000';
   ctx.fill();
+
+  // porcentagem direto nas fatias maiores
+  startAngle = -Math.PI/2;
+  const labelR = (rOuter+rInner)/2 + (rOuter-rInner)*0.18;
+  sorted.forEach(a => {
+    const sliceAngle = (a.val/total) * Math.PI*2;
+    const pct = a.val/total*100;
+    if(pct >= 4){
+      const mid = startAngle + sliceAngle/2;
+      const lx = cx + labelR*Math.cos(mid);
+      const ly = cy + labelR*Math.sin(mid);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.font = '700 22px "JetBrains Mono", monospace';
+      ctx.fillText(pct.toFixed(0)+'%', lx, ly+1);
+      ctx.fillStyle = '#0A0A0A';
+      ctx.fillText(pct.toFixed(0)+'%', lx, ly);
+    }
+    startAngle += sliceAngle;
+  });
 
   // selo + meta no centro
   const markW = 60, markH = markImg.naturalHeight/markImg.naturalWidth*markW;
@@ -1538,37 +1593,52 @@ function renderDadosCanvas(dataOrdenada, total){
     ctx.drawImage(markImg, cx-markW*0.7, cy-markH*0.7, markW*1.4, markH*1.4);
   }
 
-  // legenda
+  // cartão da legenda (lista ranqueada da maior pra menor participação)
+  roundRect(ctx, 40, legendTop-legendPad, W-80, legendCardH, 20);
+  ctx.fillStyle = CARD_BG; ctx.fill();
+  ctx.strokeStyle = BORDER_C; ctx.lineWidth = 1.5; ctx.stroke();
+
   let ly = legendTop;
-  dataOrdenada.forEach(a => {
+  sorted.forEach((a, i) => {
     const pct = (a.val/total*100);
+    const rowMidY = ly + legendRowH/2;
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = DIMMER;
+    ctx.font = '700 15px "JetBrains Mono", monospace';
+    ctx.fillText(String(i+1).padStart(2,'0'), 62, rowMidY - 8);
+
     ctx.beginPath();
-    ctx.arc(70, ly + legendRowH/2 - 8, 10, 0, Math.PI*2);
+    ctx.arc(64, rowMidY + 12, 9, 0, Math.PI*2);
     ctx.fillStyle = a.color;
     ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.stroke();
 
     ctx.textAlign = 'left';
     ctx.fillStyle = TXT;
     ctx.font = '700 24px "Space Grotesk", sans-serif';
-    const nameText = truncateText(ctx, a.name, 480);
-    ctx.fillText(nameText, 96, ly + legendRowH/2 - 2);
+    const nameText = truncateText(ctx, a.name, 430);
+    ctx.fillText(nameText, 96, rowMidY - 2);
+
+    ctx.fillStyle = DIM;
+    ctx.font = '500 16px "JetBrains Mono", monospace';
+    ctx.fillText(fmtBRL(a.val), 96, rowMidY + 22);
 
     ctx.textAlign = 'right';
     ctx.fillStyle = GOLD_BRIGHT;
-    ctx.font = '700 24px "JetBrains Mono", monospace';
-    ctx.fillText(pct.toFixed(1) + '%', W-70, ly + legendRowH/2 - 2);
+    ctx.font = '700 28px "JetBrains Mono", monospace';
+    ctx.fillText(pct.toFixed(1) + '%', W-80, rowMidY + 8);
 
-    ctx.textAlign = 'left';
-    ctx.fillStyle = DIM;
-    ctx.font = '500 17px "JetBrains Mono", monospace';
-    ctx.fillText(fmtBRL(a.val), 96, ly + legendRowH/2 + 22);
-
-    ctx.strokeStyle = BORDER_C;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(60, ly + legendRowH);
-    ctx.lineTo(W-60, ly + legendRowH);
-    ctx.stroke();
+    if(i < sorted.length-1){
+      ctx.strokeStyle = '#1c1c1c';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(62, ly + legendRowH);
+      ctx.lineTo(W-62, ly + legendRowH);
+      ctx.stroke();
+    }
 
     ly += legendRowH;
   });
@@ -1576,9 +1646,13 @@ function renderDadosCanvas(dataOrdenada, total){
   // caixas: total investido + distribuição
   const boxW = (W - 60*2 - 20)/2;
   const boxY = boxesTop;
-  roundRect(ctx, 60, boxY, boxW, boxesH, 16);
+  roundRect(ctx, 60, boxY, boxW, boxesH, 20);
   ctx.fillStyle = CARD_BG; ctx.fill();
+  ctx.save();
+  ctx.shadowColor = 'rgba(212,175,55,0.25)';
+  ctx.shadowBlur = 18;
   ctx.strokeStyle = GOLD; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.restore();
   ctx.textAlign = 'center';
   ctx.fillStyle = DIM;
   ctx.font = '600 15px "JetBrains Mono", monospace';
@@ -1588,11 +1662,11 @@ function renderDadosCanvas(dataOrdenada, total){
   centerText(ctx, fmtBRL(total), 60+boxW/2, boxY + 110);
 
   let ext=0, br=0;
-  dataOrdenada.forEach(a => { if(a.origin==='internacional') ext+=a.val; else br+=a.val; });
+  sorted.forEach(a => { if(a.origin==='internacional') ext+=a.val; else br+=a.val; });
   const extPct = total>0 ? ext/total*100 : 0, brPct = total>0 ? br/total*100 : 0;
 
   const box2X = 60+boxW+20;
-  roundRect(ctx, box2X, boxY, boxW, boxesH, 16);
+  roundRect(ctx, box2X, boxY, boxW, boxesH, 20);
   ctx.fillStyle = CARD_BG; ctx.fill();
   ctx.strokeStyle = BORDER_C; ctx.lineWidth = 1.5; ctx.stroke();
   ctx.textAlign = 'center';
