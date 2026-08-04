@@ -1464,6 +1464,11 @@ function truncateText(ctx, text, maxWidth){
   while(t.length > 1 && ctx.measureText(t + '…').width > maxWidth){ t = t.slice(0, -1); }
   return t + '…';
 }
+function splitTickerName(name){
+  const idx = name.indexOf(' ');
+  if(idx === -1) return { ticker: name, desc: '' };
+  return { ticker: name.slice(0, idx).trim(), desc: name.slice(idx+1).trim() };
+}
 
 function drawBackground(ctx, w, h){
   ctx.fillStyle = '#000000';
@@ -1506,10 +1511,9 @@ function renderDadosCanvas(dataOrdenadaIn, total){
   drawBackground(ctx, W, H);
 
   const logoImg = document.getElementById('headerLogoImg');
-  const markImg = document.getElementById('dcMarkImg');
 
   // logo + título
-  const logoW = 150, logoH = logoImg.naturalHeight/logoImg.naturalWidth*logoW;
+  const logoW = 190, logoH = logoImg.naturalHeight/logoImg.naturalWidth*logoW;
   ctx.drawImage(logoImg, W/2 - logoW/2, 40, logoW, logoH);
 
   ctx.textAlign = 'center';
@@ -1576,21 +1580,24 @@ function renderDadosCanvas(dataOrdenadaIn, total){
     startAngle += sliceAngle;
   });
 
-  // selo + meta no centro
-  const markW = 60, markH = markImg.naturalHeight/markImg.naturalWidth*markW;
+  // meta no centro (sem o selo — visual mais limpo)
   if(META > 0){
-    ctx.drawImage(markImg, cx-markW/2, cy-rInner*0.62, markW, markH);
     ctx.fillStyle = DIM;
-    ctx.font = '600 15px "JetBrains Mono", monospace';
-    centerText(ctx, 'RUMO A', cx, cy + markH*0.1);
+    ctx.font = '600 17px "JetBrains Mono", monospace';
+    centerText(ctx, 'RUMO A', cx, cy - 34);
     ctx.fillStyle = GOLD_BRIGHT;
-    ctx.font = '700 34px "Space Grotesk", sans-serif';
-    centerText(ctx, fmtAbbrev(META), cx, cy + markH*0.1 + 38);
+    ctx.font = '700 46px "Space Grotesk", sans-serif';
+    centerText(ctx, fmtAbbrev(META), cx, cy + 12);
     ctx.fillStyle = GREEN;
-    ctx.font = '600 15px "JetBrains Mono", monospace';
-    centerText(ctx, (total/META*100).toFixed(0) + '%', cx, cy + markH*0.1 + 62);
+    ctx.font = '600 17px "JetBrains Mono", monospace';
+    centerText(ctx, (total/META*100).toFixed(0) + '% da meta', cx, cy + 44);
   } else {
-    ctx.drawImage(markImg, cx-markW*0.7, cy-markH*0.7, markW*1.4, markH*1.4);
+    ctx.fillStyle = DIM;
+    ctx.font = '600 17px "JetBrains Mono", monospace';
+    centerText(ctx, 'PATRIMÔNIO', cx, cy - 12);
+    ctx.fillStyle = GOLD_BRIGHT;
+    ctx.font = '700 36px "Space Grotesk", sans-serif';
+    centerText(ctx, fmtAbbrev(total), cx, cy + 30);
   }
 
   // cartão da legenda (lista ranqueada da maior pra menor participação)
@@ -1602,34 +1609,40 @@ function renderDadosCanvas(dataOrdenadaIn, total){
   sorted.forEach((a, i) => {
     const pct = (a.val/total*100);
     const rowMidY = ly + legendRowH/2;
-
-    ctx.textAlign = 'left';
-    ctx.fillStyle = DIMMER;
-    ctx.font = '700 15px "JetBrains Mono", monospace';
-    ctx.fillText(String(i+1).padStart(2,'0'), 62, rowMidY - 8);
+    const { ticker, desc } = splitTickerName(a.name);
 
     ctx.beginPath();
-    ctx.arc(64, rowMidY + 12, 9, 0, Math.PI*2);
+    ctx.arc(60, rowMidY - 2, 8, 0, Math.PI*2);
     ctx.fillStyle = a.color;
     ctx.fill();
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.strokeStyle = 'rgba(255,255,255,0.25)';
     ctx.stroke();
 
     ctx.textAlign = 'left';
     ctx.fillStyle = TXT;
-    ctx.font = '700 24px "Space Grotesk", sans-serif';
-    const nameText = truncateText(ctx, a.name, 430);
-    ctx.fillText(nameText, 96, rowMidY - 2);
+    ctx.font = '700 25px "Space Grotesk", sans-serif';
+    ctx.fillText(ticker, 86, rowMidY - 6);
+    const tickerW = ctx.measureText(ticker).width;
 
-    ctx.fillStyle = DIM;
-    ctx.font = '500 16px "JetBrains Mono", monospace';
-    ctx.fillText(fmtBRL(a.val), 96, rowMidY + 22);
+    if(desc){
+      ctx.fillStyle = DIM;
+      ctx.font = '500 15px Inter, sans-serif';
+      const maxDescW = 400 - tickerW - 14;
+      if(maxDescW > 40){
+        const descText = truncateText(ctx, desc.toUpperCase(), maxDescW);
+        ctx.fillText(descText, 86 + tickerW + 14, rowMidY - 6);
+      }
+    }
+
+    ctx.fillStyle = DIMMER;
+    ctx.font = '500 15px "JetBrains Mono", monospace';
+    ctx.fillText(fmtBRL(a.val), 86, rowMidY + 19);
 
     ctx.textAlign = 'right';
     ctx.fillStyle = GOLD_BRIGHT;
-    ctx.font = '700 28px "JetBrains Mono", monospace';
-    ctx.fillText(pct.toFixed(1) + '%', W-80, rowMidY + 8);
+    ctx.font = '700 27px "JetBrains Mono", monospace';
+    ctx.fillText(pct.toFixed(1) + '%', W-80, rowMidY + 7);
 
     if(i < sorted.length-1){
       ctx.strokeStyle = '#1c1c1c';
